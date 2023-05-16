@@ -1,0 +1,185 @@
+---
+id: hdcztorrent
+name: HD-CzTorrent
+description: "HD-CzTorrent is a CZECH semi private site for TV / MOVIES / GENERAL"
+language: cs-CZ
+type: semi-private
+encoding: UTF-8
+links:
+  - http://www.hd-cztorrent.cz/
+legacylinks:
+  - https://www.hd-cztorrent.cz/  # site is forcing http
+
+caps:
+  categorymappings:
+    # Filmy
+    - {id: 117, cat: Movies/DVD, desc: "DvD"}
+    - {id: 119, cat: Movies/BluRay, desc: "Blu-Ray "}
+    - {id: 120, cat: Movies/HD, desc: "HD 720"}
+    - {id: 121, cat: Movies/HD, desc: "HD 1080"}
+    - {id: 122, cat: Movies/UHD, desc: "4K"}
+    - {id: 123, cat: Movies/UHD, desc: "4K - Originál Zvuk"}
+    - {id: 124, cat: Movies/3D, desc: "3D Filmy Bluray"}
+    - {id: 125, cat: Movies/3D, desc: "3D Filmy"}
+    - {id: 126, cat: Movies/SD, desc: "SD Filmy"}
+    - {id: 127, cat: Movies/HD, desc: "H-265"}
+    - {id: 128, cat: TV/Documentary, desc: "Dokument"}
+    - {id: 129, cat: TV/Sport, desc: "Sportovní Filmy"}
+    - {id: 130, cat: TV/WEB-DL, desc: "TV - WEB- DL"}
+    - {id: 131, cat: Movies, desc: "RLS For HDCZT"}
+    - {id: 91, cat: TV, desc: "Serial titulky"}
+    - {id: 45, cat: TV, desc: "SERIALY CZ"}
+    - {id: 81, cat: Movies, desc: "ORIGINAL JAZYK"}
+    # HUDBA
+    - {id: 57, cat: Audio/Lossless, desc: "Hudba flac"}
+    - {id: 58, cat: Audio/MP3, desc: "Hudba mp3"}
+    - {id: 96, cat: Audio/Other, desc: "RETRO HUDBA"}
+    # ostatni
+    - {id: 64, cat: Books, desc: "E-books, PDF fotky"}
+    - {id: 65, cat: Audio/Audiobook, desc: "Mluvene slovo"}
+    - {id: 113, cat: Books/Other, desc: "obrazky fotky"}
+    # PORNO
+    - {id: 11, cat: XXX, desc: "XXX 18+KLASIKA"}
+    - {id: 99, cat: XXX, desc: "XXX GAY"}
+    - {id: 100, cat: XXX, desc: "XXX ASIAN"}
+    - {id: 101, cat: XXX, desc: "XXX 3D"}
+    - {id: 106, cat: XXX/ImageSet, desc: "XXX-OBRÁZKY"}
+    - {id: 108, cat: XXX, desc: "PORNO BDSM"}
+    # HRY
+    - {id: 73, cat: PC/Games, desc: "Hry, Games"}
+    - {id: 97, cat: Console/PS4, desc: "HRY PS4"}
+    # APLIKACE
+    - {id: 60, cat: PC/Mobile-Other, desc: "Mobil PDA"}
+    - {id: 62, cat: PC, desc: "Aplikace All"}
+
+  modes:
+    search: [q]
+    tv-search: [q, season, ep]
+    movie-search: [q]
+    music-search: [q]
+    book-search: [q]
+
+settings:
+  - name: username
+    type: text
+    label: Username
+  - name: password
+    type: password
+    label: Password
+  - name: freeleech
+    type: checkbox
+    label: Search freeleech only
+    default: false
+  - name: sort
+    type: select
+    label: Sort requested from site
+    default: 3
+    options:
+      3: created
+      5: seeders
+      4: size
+      2: title
+  - name: type
+    type: select
+    label: Order requested from site
+    default: 2
+    options:
+      2: desc
+      1: asc
+  - name: info
+    type: info
+    label: Results Per Page
+    default: For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile.
+
+login:
+  method: post
+  path: index.php?page=login
+  inputs:
+    uid: "{{ .Config.username }}"
+    pwd: "{{ .Config.password }}"
+  error:
+    - selector: td.lista span[style="color:#FF0000;"]
+  test:
+    path: index.php
+    selector: a[href="logout.php"]
+
+search:
+  paths:
+    # http://www.hd-cztorrent.cz/index.php?page=torrents&search=the+avengers&category=0&uploader=0&options=0&active=0&gold=0&order=3&by=2
+    - path: index.php
+  inputs:
+    page: torrents
+    search: "{{ .Keywords }}"
+    category: "{{ if .Categories }}{{ range .Categories }}{{.}};{{end}}{{ else }}0{{ end }}"
+    uploader: 0
+    # 0 filename, 1 file & desc, 2 description
+    options: 0
+    # 0 all, 1 active only, 2 dead only
+    active: 0
+    # 0 all, 1 classic, 2 silver, 3 gold, 4 silver & gold
+    gold: "{{ if .Config.freeleech }}3{{ else }}0{{ end }}"
+    order: "{{ .Config.sort }}"
+    by: "{{ .Config.type }}"
+
+  rows:
+    selector: td#mcol table.lista > tbody > tr:has(a[href^="magnet:?xt="])
+
+  fields:
+    category:
+      selector: a[href*="category="]
+      attribute: href
+      filters:
+        - name: querystring
+          args: category
+    title:
+      selector: a[href^="index.php?page=torrent-details"]
+    details:
+      selector: a[href^="index.php?page=torrent-details"]
+      attribute: href
+    download:
+      selector: a[href^="download.php"]
+      attribute: href
+    magnet:
+      selector: a[href^="magnet:?xt="]
+      attribute: href
+    poster:
+      selector: a[href^="index.php?page=torrent-details"]
+      attribute: onmouseover
+      filters:
+        - name: regexp
+          args: "src=(.+?) "
+    date:
+      selector: td:nth-child(7)
+      # auto adjusted by site account profile
+      filters:
+        - name: dateparse
+          args: "dd/MM/yyyy"
+    size:
+      selector: td:nth-child(12)
+    seeders:
+      selector: td:nth-child(9)
+    leechers:
+      selector: td:nth-child(10)
+    grabs:
+      selector: td:nth-child(11)
+    downloadvolumefactor:
+      case:
+        img[src$="freeleech.gif"]: 0
+        img[src$="gold.gif"]: 0
+        img[src$="silver.gif"]: 0.5
+        "*": 1
+    uploadvolumefactor:
+      case:
+        img[src$="2x.gif"]: 2
+        img[src$="3x.gif"]: 3
+        img[src$="4x.gif"]: 4
+        img[src$="5x.gif"]: 5
+        img[src$="6x.gif"]: 6
+        img[src$="7x.gif"]: 7
+        img[src$="8x.gif"]: 8
+        img[src$="9x.gif"]: 9
+        img[src$="10x.gif"]: 10
+        "*": 1
+    minimumratio:
+      text: 0.3
+# xbtit dt fm v7.1 customized
